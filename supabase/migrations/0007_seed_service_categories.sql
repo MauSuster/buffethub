@@ -5,8 +5,17 @@
 
 BEGIN;
 
--- Extensão utilizada para geração de UUID.
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+-- ============================================================
+-- Observação sobre UUID
+-- ============================================================
+--
+-- Não criamos a extensão pgcrypto nesta migration.
+--
+-- A função gen_random_uuid() está disponível nas versões modernas
+-- do PostgreSQL usadas pelo Supabase e pelo ambiente de verificação.
+--
+-- A criação explícita da extensão foi removida porque o banco
+-- temporário usado pelo CI pode não disponibilizar pgcrypto.
 
 -- ============================================================
 -- Tabela de categorias
@@ -58,12 +67,14 @@ ON public.service_categories (
 );
 
 -- ============================================================
--- Função para atualizar updated_at
+-- Função e trigger de updated_at
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public
 AS $$
 BEGIN
   NEW.updated_at = now();
@@ -283,11 +294,9 @@ ON CONFLICT DO NOTHING;
 -- Relacionamento com services
 -- ============================================================
 
--- Cria category_id caso a coluna ainda não exista.
 ALTER TABLE public.services
 ADD COLUMN IF NOT EXISTS category_id uuid;
 
--- Remove uma possível FK antiga com o mesmo nome antes de recriar.
 ALTER TABLE public.services
 DROP CONSTRAINT IF EXISTS services_category_id_fkey;
 
@@ -307,35 +316,88 @@ ON public.services(category_id);
 
 UPDATE public.services
 SET category_id = (
-  SELECT id
-  FROM public.service_categories
-  WHERE slug = 'outros-servicos'
+  SELECT service_category.id
+  FROM public.service_categories AS service_category
+  WHERE lower(service_category.slug) = 'outros-servicos'
+  ORDER BY service_category.sort_order ASC
   LIMIT 1
 )
 WHERE category_id IS NULL;
 
--- category_id passa a ser obrigatório depois da atualização.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.services
+    WHERE category_id IS NULL
+  ) THEN
+    RAISE EXCEPTION
+      'Não foi possível definir uma categoria para todos os serviços existentes.';
+  END IF;
+END;
+$$;
+
 ALTER TABLE public.services
 ALTER COLUMN category_id SET NOT NULL;
 
 -- ============================================================
--- RLS
+-- Row Level Security
 -- ============================================================
 
-ALTER TABLE public.service_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.service_categories
+ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS
   "Categorias de serviços podem ser visualizadas publicamente"
 ON public.service_categories;
 
-CREATE POLICY
-  "Categorias de serviços podem ser visualizadas publicamente"
-ON public.service_categories
-FOR SELECT
-TO anon, authenticated
-USING (is_active = true);
+DO $$
+DECLARE
+  has_anon_role boolean;
+  has_authenticated_role boolean;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_roles
+    WHERE rolname = 'anon'
+  )
+  INTO has_anon_role;
 
--- Modificações ficam bloqueadas para usuários comuns.
+  SELECT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_roles
+    WHERE rolname = 'authenticated'
+  )
+  INTO has_authenticated_role;
+
+  IF has_anon_role AND has_authenticated_role THEN
+    EXECUTE $policy$
+      CREATE POLICY
+        "Categorias de serviços podem ser visualizadas publicamente"
+      ON public.service_categories
+      FOR SELECT
+      TO anon, authenticated
+      USING (is_active = true)
+    $policy$;
+  ELSE
+    EXECUTE $policy$
+      CREATE POLICY
+        "Categorias de serviços podem ser visualizadas publicamente"
+      ON public.service_categories
+      FOR SELECT
+      TO PUBLIC
+      USING (is_active = true)
+    $policy$;
+  END IF;
+END;
+$$;
+
+-- Modificações permanecem bloqueadas para usuários comuns.
+--
+-- No Supabase, a leitura é concedida a anon e authenticated.
+-- Em PostgreSQL genérico usado pelo CI, a policy usa PUBLIC.
+--
+-- INSERT, UPDATE e DELETE continuam sem policies públicas.
 -- Novas categorias devem ser cadastradas por migrations,
 -- service role ou painel administrativo autorizado.
 
