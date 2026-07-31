@@ -360,7 +360,6 @@ export default async function ProviderPage({
     <main className="min-h-screen bg-background">
       <section className="relative h-44 w-full overflow-hidden bg-secondary sm:h-56 md:h-64 lg:h-72">
         {provider.banner_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={provider.banner_url}
             alt={`Banner de ${provider.trade_name}`}
@@ -518,7 +517,6 @@ export default async function ProviderPage({
                               : 'aspect-[4/3]'
                           }
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={image.publicUrl}
                             alt={

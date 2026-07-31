@@ -1123,7 +1123,7 @@ export default function ProviderGalleryManager({
                   ].join(' ')}
                 >
                   <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    
                     <img
                       src={getImagePreviewUrl(
                         image,
