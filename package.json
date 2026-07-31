@@ -1,0 +1,44 @@
+{
+  "name": "buffethub",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:web": "pnpm --filter @buffethub/web dev",
+    "dev:mobile": "pnpm --filter @buffethub/mobile start",
+    "build": "turbo build",
+    "build:web": "pnpm --filter @buffethub/web build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "test:e2e": "pnpm --filter @buffethub/web test:e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:push": "supabase db push",
+    "db:types": "supabase gen types typescript --local > packages/database/src/types.ts",
+    "db:verify": "node scripts/verify-migrations.mjs",
+    "seed": "supabase db reset",
+    "prepare": "husky || true",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@buffethub/typescript-config": "workspace:*",
+    "@electric-sql/pglite": "^0.5.4",
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "globals": "^17.7.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.19.0"
+  }
+}

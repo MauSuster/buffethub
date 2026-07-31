@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Paleta BuffetHub — ameixa/vinho + manga/maracujá sobre papel quente */
+    --background: 24 40% 98%;
+    --foreground: 327 22% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 327 22% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 327 22% 12%;
+
+    --primary: 325 58% 29%;
+    --primary-foreground: 24 40% 98%;
+
+    --secondary: 24 33% 94%;
+    --secondary-foreground: 327 30% 20%;
+
+    --muted: 24 30% 95%;
+    --muted-foreground: 327 10% 40%;
+
+    --accent: 32 88% 58%;
+    --accent-foreground: 327 42% 14%;
+
+    --success: 153 44% 33%;
+    --success-foreground: 24 40% 98%;
+
+    --destructive: 3 74% 47%;
+    --destructive-foreground: 24 40% 98%;
+
+    --border: 24 22% 88%;
+    --input: 24 22% 86%;
+    --ring: 325 58% 29%;
+
+    --radius: 0.7rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'ss01', 'cv05';
+  }
+
+  ::selection {
+    background-color: hsl(var(--accent) / 0.35);
+    color: hsl(var(--foreground));
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight text-balance;
+  }
+}
+
+@layer components {
+  /* Sobrescrita (eyebrow) reutilizada em seções e formulários */
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary;
+  }
+
+  /* Textura de confete discreta — usada só no herói (a "assinatura") */
+  .confetti {
+    background-image:
+      radial-gradient(hsl(var(--accent) / 0.55) 1.5px, transparent 1.6px),
+      radial-gradient(hsl(var(--primary) / 0.35) 1.5px, transparent 1.6px);
+    background-size:
+      26px 26px,
+      26px 26px;
+    background-position:
+      0 0,
+      13px 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
