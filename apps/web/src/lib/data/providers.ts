@@ -38,10 +38,12 @@ function sanitizeSearchTerm(value?: string): string {
 }
 
 function normalizeState(value?: string): string {
-  return value
-    ?.replace(/[^a-zA-Z]/g, '')
-    .trim()
-    .toUpperCase() ?? '';
+  return (
+    value
+      ?.replace(/[^a-zA-Z]/g, '')
+      .trim()
+      .toUpperCase() ?? ''
+  );
 }
 
 function normalizeId(value?: string | null): string {
@@ -49,10 +51,12 @@ function normalizeId(value?: string | null): string {
 }
 
 function normalizeStoragePath(value?: string | null): string {
-  return value
-    ?.trim()
-    .replace(/^\/+/, '')
-    .replace(/\/{2,}/g, '/') ?? '';
+  return (
+    value
+      ?.trim()
+      .replace(/^\/+/, '')
+      .replace(/\/{2,}/g, '/') ?? ''
+  );
 }
 
 function logSupabaseError(
@@ -67,10 +71,6 @@ function logSupabaseError(
   });
 }
 
-/**
- * Detecta quando a tabela da galeria ainda não existe
- * ou ainda não está disponível no cache do PostgREST.
- */
 function isMissingGalleryTableError(
   error: SupabaseErrorLike,
 ): boolean {
@@ -502,8 +502,8 @@ export async function getProviderServices(
 /**
  * Retorna as imagens públicas da galeria do fornecedor.
  *
- * A consulta filtra diretamente por provider_id e também valida
- * se o caminho no Storage começa com o mesmo ID do fornecedor.
+ * A coluna alt_text não é consultada porque ela não existe
+ * atualmente na tipagem/tabela provider_gallery_images.
  */
 export async function getProviderGalleryImages(
   providerId: string,
@@ -524,7 +524,6 @@ export async function getProviderGalleryImages(
           id,
           provider_id,
           storage_path,
-          alt_text,
           position,
           created_at
         `,
@@ -569,18 +568,16 @@ export async function getProviderGalleryImages(
     const expectedStoragePrefix =
       `${normalizedProviderId}/`;
 
-    const images = data
+    return data
       .map((row): ProviderGalleryImage | null => {
-        const rowProviderId = normalizeId(row.provider_id);
+        const rowProviderId = normalizeId(
+          row.provider_id,
+        );
+
         const storagePath = normalizeStoragePath(
           row.storage_path,
         );
 
-        /*
-         * Segurança adicional:
-         * o registro retornado precisa pertencer ao mesmo
-         * fornecedor solicitado.
-         */
         if (rowProviderId !== normalizedProviderId) {
           if (process.env.NODE_ENV !== 'production') {
             console.warn(
@@ -610,11 +607,6 @@ export async function getProviderGalleryImages(
           return null;
         }
 
-        /*
-         * O caminho deve seguir:
-         *
-         * provider-id/uuid.extensao
-         */
         if (!storagePath.startsWith(expectedStoragePrefix)) {
           if (process.env.NODE_ENV !== 'production') {
             console.warn(
@@ -631,11 +623,10 @@ export async function getProviderGalleryImages(
           return null;
         }
 
-        const {
-          data: publicUrlData,
-        } = supabase.storage
-          .from(PROVIDER_GALLERY_BUCKET)
-          .getPublicUrl(storagePath);
+        const { data: publicUrlData } =
+          supabase.storage
+            .from(PROVIDER_GALLERY_BUCKET)
+            .getPublicUrl(storagePath);
 
         const publicUrl =
           publicUrlData.publicUrl?.trim() ?? '';
@@ -660,7 +651,7 @@ export async function getProviderGalleryImages(
           providerId: rowProviderId,
           storagePath,
           publicUrl,
-          altText: row.alt_text?.trim() || null,
+          altText: null,
           position: row.position ?? 0,
           createdAt: row.created_at ?? null,
         };
@@ -670,22 +661,35 @@ export async function getProviderGalleryImages(
           image !== null,
       )
       .sort((firstImage, secondImage) => {
-        if (firstImage.position !== secondImage.position) {
-          return firstImage.position - secondImage.position;
+        if (
+          firstImage.position !==
+          secondImage.position
+        ) {
+          return (
+            firstImage.position -
+            secondImage.position
+          );
         }
 
-        const firstCreatedAt = firstImage.createdAt
-          ? new Date(firstImage.createdAt).getTime()
-          : 0;
+        const firstCreatedAt =
+          firstImage.createdAt
+            ? new Date(
+                firstImage.createdAt,
+              ).getTime()
+            : 0;
 
-        const secondCreatedAt = secondImage.createdAt
-          ? new Date(secondImage.createdAt).getTime()
-          : 0;
+        const secondCreatedAt =
+          secondImage.createdAt
+            ? new Date(
+                secondImage.createdAt,
+              ).getTime()
+            : 0;
 
-        return firstCreatedAt - secondCreatedAt;
+        return (
+          firstCreatedAt -
+          secondCreatedAt
+        );
       });
-
-    return images;
   } catch (error) {
     console.error(
       'Erro inesperado ao carregar imagens da galeria do fornecedor:',
